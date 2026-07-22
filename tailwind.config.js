@@ -1,0 +1,61 @@
+import forms from '@tailwindcss/forms';
+import containerQueries from '@tailwindcss/container-queries';
+
+/** @type {import('tailwindcss').Config} */
+export default {
+  content: ['./index.html', './src/**/*.{js,jsx}'],
+  darkMode: 'class',
+  theme: {
+    extend: {
+      colors: {
+        primary: '#3B82F6',
+        'primary-hover': '#2170E4',
+        'primary-light': '#DBEAFE',
+        secondary: '#60A5FA',
+        'secondary-light': '#E0F2FE',
+        tertiary: '#545D62',
+        'tertiary-container': '#6D767B',
+        success: '#10B981',
+        danger: '#BA1A1A',
+        'danger-container': '#FFDAD6',
+        'text-main': '#171C1F',
+        'text-sub': '#424754',
+        outline: '#727785',
+        'outline-variant': '#C2C6D6',
+        'surface-container': '#F8F9FF',
+        'surface-dim': '#D6DADE',
+        'surface-container-low': '#F0F4F8',
+        'badge-completed-bg': '#D1FAE5',
+        'badge-completed-dot': '#10B981',
+        'badge-completed-text': '#065F46',
+        'badge-pending-bg': '#FEF3C7',
+        'badge-pending-dot': '#F59E0B',
+        'badge-pending-text': '#92400E',
+        'badge-rejected-bg': '#FEE2E2',
+        'badge-rejected-dot': '#EF4444',
+        'badge-rejected-text': '#991B1B',
+        'badge-active-bg': '#DBEAFE',
+        'badge-active-dot': '#3B82F6',
+        'badge-active-text': '#1D4ED8',
+        'badge-inactive-bg': '#F1F5F9',
+        'badge-inactive-dot': '#94A3B8',
+        'badge-inactive-text': '#475569',
+        'on-surface': '#171c1f',
+        background: '#f6fafe',
+      },
+      spacing: {
+        gutter: '24px',
+        'max-width': '1440px',
+        'bento-margin': '32px',
+        'bento-gutter': '24px',
+      },
+      borderRadius: {
+        DEFAULT: '8px',
+        lg: '8px',
+        xl: '12px',
+        '2xl': '24px',
+      },
+    },
+  },
+  plugins: [forms, containerQueries],
+};

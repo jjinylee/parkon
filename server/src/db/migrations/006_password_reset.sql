@@ -1,0 +1,4 @@
+ALTER TABLE users ADD COLUMN login_attempts INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN locked_until TEXT;
+ALTER TABLE users ADD COLUMN reset_token TEXT;
+ALTER TABLE users ADD COLUMN reset_expires TEXT;

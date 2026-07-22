@@ -1,0 +1,11 @@
+node_modules/
+dist/
+__pycache__/
+*.pyc
+.DS_Store
+*.log
+.env
+server/data/
+server/uploads/
+server/.env
+*:Zone.Identifier
