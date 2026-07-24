@@ -293,6 +293,12 @@ Content-Type: application/json
 | 3 | 새 비밀번호 bcrypt.hash 후 UPDATE |
 | 4 | 클라이언트에서 logout() 호출하여 재로그인 유도 |
 
+### UI
+
+- MyPage의 "비밀번호 변경" 섹션은 버튼만 표시 → 클릭 시 `/change-password` 별도 페이지로 이동
+- `/change-password` 페이지에서 현재비번 + 새비번 + 확인 입력 → PUT /auth/password 호출
+- 성공 시 alert + logout() → 로그인 페이지로 리다이렉트
+
 ---
 
 ## 10. 비밀번호 재설정 (Forgot / Reset Password)

@@ -497,6 +497,15 @@
 | email | string | N | 이메일 |
 | answers | string | N | 마이페이지 질문답변 JSON string (users.mypage_answers에 저장) |
 
+> 프론트에서 phone 필드 값은 자동으로 answers.Q01_PHONE에 동기화되어 저장됨
+
+---
+
+### GET /change-password
+비밀번호 변경 페이지 (프론트 라우트, 별도 페이지)
+
+**POST /auth/password** — 비밀번호 변경 API (위 1. Auth 섹션 참조)
+
 ---
 
 ## 11. Config (전역 설정) — 관리자 전용
