@@ -38,7 +38,7 @@ function downloadCSV(rows, filename) {
   a.click(); URL.revokeObjectURL(url);
 }
 
-function DetailView({ template, rows, quota, onQuotaChange, onBatchApprove, onMultiApprove, onApprove, onReject, onBack }) {
+function DetailView({ template, rows, quota, onQuotaChange, onBatchApprove, onApprove, onReject, onBack }) {
   const [sortBy, setSortBy] = useState('total_score');
   const [sortDir, setSortDir] = useState('desc');
   const [showMailModal, setShowMailModal] = useState(false);
@@ -87,6 +87,24 @@ function DetailView({ template, rows, quota, onQuotaChange, onBatchApprove, onMu
   const waiting = sorted.filter(r => r.status === 'submitted').length;
   const whitelisted = sorted.filter(r => r.is_whitelisted).length;
 
+  const selectedRows = sorted.filter(r => selectedIds.has(r.id));
+  const selectedStatuses = [...new Set(selectedRows.map(r => r.status))];
+  const canApprove = selectedStatuses.length > 0 && selectedStatuses.every(s => s === 'submitted' || s === 'rejected');
+  const canReject = selectedStatuses.length > 0 && selectedStatuses.every(s => s === 'submitted' || s === 'approved');
+  const multiActionLabel = canApprove ? '승인' : canReject ? '반려' : null;
+  const multiActionColor = canApprove ? 'text-primary border-primary' : canReject ? 'text-red-500 border-red-400' : 'text-text-sub border-outline-variant';
+
+  const handleMultiAction = () => {
+    if (!multiActionLabel) return;
+    const action = multiActionLabel === '승인' ? 'approve' : 'reject';
+    if (action === 'reject' && !window.confirm('선택한 항목을 반려 처리하시겠습니까?')) return;
+    selectedRows.forEach(r => {
+      if (action === 'approve') onApprove(r.id);
+      else onReject(r.id);
+    });
+    setSelectedIds(new Set());
+  };
+
   const handleSearch = () => {}; // trigger re-render by setting state
 
   const allVisibleSelected = sorted.length > 0 && sorted.every(r => selectedIds.has(r.id));
@@ -102,16 +120,6 @@ function DetailView({ template, rows, quota, onQuotaChange, onBatchApprove, onMu
     next.has(id) ? next.delete(id) : next.add(id);
     setSelectedIds(next);
   };
-  const handleMultiApprove = async () => {
-    const targets = sorted.filter(r => selectedIds.has(r.id) && r.status === 'submitted');
-    if (targets.length === 0) return;
-    const wlCount = targets.filter(r => r.is_whitelisted).length;
-    const msg = `선택한 ${targets.length}명을 승인하시겠습니까?${wlCount > 0 ? `\n(화이트리스트 ${wlCount}명은 배정 인원에서 제외됩니다)` : ''}`;
-    if (!window.confirm(msg)) return;
-    await onMultiApprove(targets.map(r => r.id));
-    setSelectedIds(new Set());
-  };
-
   return (
     <div className="space-y-4">
       {/* Back + header */}
@@ -171,9 +179,9 @@ function DetailView({ template, rows, quota, onQuotaChange, onBatchApprove, onMu
               className="bg-primary text-white px-4 py-1.5 rounded-lg text-sm font-bold disabled:opacity-40">
               상위 {quota}명 승인
             </button>
-            <button onClick={handleMultiApprove} disabled={selectedIds.size === 0}
-              className="border border-primary text-primary px-4 py-1.5 rounded-lg text-sm font-bold disabled:opacity-40">
-              선택 승인 ({selectedIds.size})
+            <button onClick={handleMultiAction} disabled={!multiActionLabel}
+              className={`border px-4 py-1.5 rounded-lg text-sm font-bold disabled:opacity-40 ${multiActionColor}`}>
+              선택 {multiActionLabel || '...'} ({selectedIds.size})
             </button>
             <div className="relative">
               <button onClick={() => setShowExport(prev => !prev)}
@@ -531,13 +539,6 @@ export default function AdminStatus() {
     refreshTemplate(templateId);
   };
 
-  const handleMultiApprove = async (templateId, ids) => {
-    for (const id of ids) {
-      try { await api('/applications/' + id + '/approve', { method: 'PUT', body: '{}' }); } catch {}
-    }
-    refreshTemplate(templateId);
-  };
-
   const handleApprove = async (id, templateId) => {
     const row = applicantsMap[templateId]?.find(r => r.id === id);
     if (row?.is_whitelisted && !window.confirm('화이트리스트 회원입니다. 승인 시 배정 인원에서 제외됩니다.\n계속하시겠습니까?')) return;
@@ -584,7 +585,6 @@ export default function AdminStatus() {
               quota={quotas[selectedTemplateId] || 60}
               onQuotaChange={val => setQuotas(prev => ({ ...prev, [selectedTemplateId]: val }))}
               onBatchApprove={() => handleBatchApprove(selectedTemplateId)}
-              onMultiApprove={(ids) => handleMultiApprove(selectedTemplateId, ids)}
               onApprove={(id) => handleApprove(id, selectedTemplateId)}
               onReject={(id) => handleReject(id, selectedTemplateId)}
               onBack={() => setSelectedTemplateId(null)}
