@@ -11,7 +11,7 @@ function list({ status }) {
   }
 
   const items = db.prepare(`
-    SELECT t.id, t.title, t.description, t.status, t.start_date, t.end_date, t.created_by,
+    SELECT t.id, t.title, t.description, t.status, t.start_date, t.end_date, t.created_by, t.finalized,
            u.name AS author, t.created_at
     FROM application_templates t
     JOIN users u ON u.id = t.created_by
@@ -177,4 +177,13 @@ function deleteQuestion(id) {
   db.prepare('DELETE FROM application_questions WHERE id = ?').run(id);
 }
 
-module.exports = { list, getById, create, update, remove, getQuestions, saveQuestions, updateQuestion, deleteQuestion };
+function finalize(id) {
+  const template = db.prepare('SELECT id, finalized FROM application_templates WHERE id = ?').get(id);
+  if (!template) throw new NotFoundError('템플릿을 찾을 수 없습니다.');
+  if (template.finalized) throw new AppError('CONFLICT', '이미 마감 처리된 템플릿입니다.', 409);
+  db.prepare('UPDATE application_templates SET finalized = 1 WHERE id = ?').run(id);
+  logger.info(`Template finalized: id=${id}`);
+  return { id };
+}
+
+module.exports = { list, getById, create, update, remove, getQuestions, saveQuestions, updateQuestion, deleteQuestion, finalize };

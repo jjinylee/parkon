@@ -14,6 +14,7 @@ router.get('/:id', authenticate, templatesController.getById);
 // Admin only — manage templates
 router.post('/', authenticate, requireAdmin, templatesController.create);
 router.put('/:id', authenticate, requireAdmin, templatesController.update);
+router.put('/:id/finalize', authenticate, requireAdmin, templatesController.finalize);
 router.delete('/:id', authenticate, requireAdmin, templatesController.remove);
 
 // Questions (admin only)

@@ -105,6 +105,14 @@ function DetailView({ template, rows, quota, onQuotaChange, onBatchApprove, onAp
     setSelectedIds(new Set());
   };
 
+  const handleFinalize = async () => {
+    if (!window.confirm('최종 마감 처리하시겠습니까?\n마감 후에는 사용자에게 승인/반려 결과가 공개됩니다.')) return;
+    try {
+      await api(`/templates/${template.id}/finalize`, { method: 'PUT' });
+      alert('마감 처리되었습니다.');
+    } catch (err) { alert(err.message); }
+  };
+
   const handleSearch = () => {}; // trigger re-render by setting state
 
   const allVisibleSelected = sorted.length > 0 && sorted.every(r => selectedIds.has(r.id));
@@ -209,6 +217,20 @@ function DetailView({ template, rows, quota, onQuotaChange, onBatchApprove, onAp
                 className="border border-primary text-primary px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-primary/5">
                 메일 발송
               </button>
+            )}
+            {!template.finalized ? (
+              <div className="flex items-center gap-1">
+                <button onClick={handleFinalize}
+                  className="border border-amber-600 text-amber-700 px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-amber-50 whitespace-nowrap">
+                  마감
+                </button>
+                <span className="text-[10px] text-text-sub hidden md:inline">마감 이후, 사용자에게 승인/반려 정보가 표시됩니다.</span>
+              </div>
+            ) : (
+              <span className="inline-flex items-center gap-1 text-[11px] text-badge-completed-text font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-badge-completed-dot" />
+                마감완료
+              </span>
             )}
           </div>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">

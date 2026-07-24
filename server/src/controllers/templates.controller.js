@@ -128,4 +128,11 @@ async function deleteQuestion(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { list, getById, create, update, remove, getQuestions, saveQuestions, updateQuestion, deleteQuestion };
+async function finalize(req, res, next) {
+  try {
+    const result = templatesService.finalize(Number(req.params.id));
+    return success(res, result, '템플릿이 마감 처리되었습니다.');
+  } catch (err) { next(err); }
+}
+
+module.exports = { list, getById, create, update, remove, getQuestions, saveQuestions, updateQuestion, deleteQuestion, finalize };

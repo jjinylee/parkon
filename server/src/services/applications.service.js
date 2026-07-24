@@ -11,24 +11,40 @@ function getUserApplications(userId, status) {
     params.push(status);
   }
 
-  return db.prepare(`
-    SELECT pa.*, t.title AS template_title, t.start_date, t.end_date
+  const items = db.prepare(`
+    SELECT pa.*, t.title AS template_title, t.start_date, t.end_date, t.finalized
     FROM parking_applications pa
     JOIN application_templates t ON t.id = pa.template_id
     ${where}
     ORDER BY pa.created_at DESC
   `).all(...params);
+
+  // Before template finalized, hide real status from users
+  for (const item of items) {
+    if (!item.finalized && item.status !== 'draft') {
+      item.status = 'submitted';
+    }
+    delete item.finalized;
+  }
+
+  return items;
 }
 
 function getById(id) {
   const app = db.prepare(`
-    SELECT pa.*, t.title AS template_title, t.start_date, t.end_date, t.allow_modify, t.status AS template_status
+    SELECT pa.*, t.title AS template_title, t.start_date, t.end_date, t.allow_modify, t.status AS template_status, t.finalized
     FROM parking_applications pa
     JOIN application_templates t ON t.id = pa.template_id
     WHERE pa.id = ?
   `).get(id);
 
   if (!app) throw new NotFoundError('신청을 찾을 수 없습니다.');
+
+  // Before template finalized, hide real status from users
+  if (!app.finalized && app.status !== 'draft') {
+    app.status = 'submitted';
+  }
+  delete app.finalized;
 
   app.answers = db.prepare(`
     SELECT aa.*, q.question_text, q.input_type, q.is_required, q.sort_order,
