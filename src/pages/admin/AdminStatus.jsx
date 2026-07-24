@@ -224,7 +224,10 @@ function DetailView({ template, rows, quota, onQuotaChange, onBatchApprove, onAp
                   className="border border-amber-600 text-amber-700 px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-amber-50 whitespace-nowrap">
                   마감
                 </button>
-                <span className="text-[10px] text-text-sub hidden md:inline">마감 이후, 사용자에게 승인/반려 정보가 표시됩니다.</span>
+                <span className="text-xs text-primary hidden md:inline-flex items-center gap-1">
+                  <span className="material-symbols-outlined text-sm">help_outline</span>
+                  마감 이후, 사용자에게 승인/반려 정보가 표시됩니다.
+                </span>
               </div>
             ) : (
               <span className="inline-flex items-center gap-1 text-[11px] text-badge-completed-text font-bold">
