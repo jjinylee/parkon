@@ -130,14 +130,14 @@ function DetailView({ template, rows, quota, onQuotaChange, onBatchApprove, onMu
       {/* Search area */}
       <div className="flex flex-wrap items-center gap-2 rounded-xl border border-outline-variant bg-white/60 p-3">
         <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
-          className="neumorphic-recessed px-2 py-1.5 text-xs w-24">
+          className="appearance-none bg-white border border-outline-variant rounded-lg px-3 py-1.5 text-xs w-28 cursor-pointer bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20fill%3D%22%23666%22%3E%3Cpath%20d%3D%22M4%204l4%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_8px_center] pr-7">
           <option value="all">전체 상태</option>
           <option value="approved">승인</option>
           <option value="submitted">대기</option>
           <option value="rejected">반려</option>
         </select>
         <select value={filterField} onChange={e => setFilterField(e.target.value)}
-          className="neumorphic-recessed px-2 py-1.5 text-xs w-24">
+          className="appearance-none bg-white border border-outline-variant rounded-lg px-3 py-1.5 text-xs w-28 cursor-pointer bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2212%22%20height%3D%2212%22%20fill%3D%22%23666%22%3E%3Cpath%20d%3D%22M4%204l4%204%204-4%22%2F%3E%3C%2Fsvg%3E')] bg-no-repeat bg-[right_8px_center] pr-7">
           <option value="name">신청자</option>
           <option value="phone">연락처</option>
           <option value="car_number">차량번호</option>
