@@ -19,19 +19,25 @@ export default function MyPage() {
       api('/config/questions').catch(() => ({ questions: [] })),
     ])
       .then(([myData, config]) => {
+        const phone = myData.user?.phone || '';
         setForm({
           name: myData.user?.name || '',
-          phone: myData.user?.phone || '',
+          phone,
           email: myData.user?.email || '',
         });
-        setConfigQuestions(config.questions || []);
-        if (myData.mypage_answers) {
-          setAnswers(myData.mypage_answers);
-        }
+        const allQuestions = config.questions || [];
+        setConfigQuestions(allQuestions.filter(q => q.question_id !== 'Q01_PHONE'));
+        const loaded = myData.mypage_answers || {};
+        if (phone && !loaded.Q01_PHONE) loaded.Q01_PHONE = phone;
+        setAnswers(loaded);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
+
+  useEffect(() => {
+    setAnswers(prev => ({ ...prev, Q01_PHONE: form.phone }));
+  }, [form.phone]);
 
   const calcTenureYears = (joinDate) => {
     if (!joinDate) return null;
@@ -105,7 +111,7 @@ export default function MyPage() {
         body: JSON.stringify({
           phone: form.phone,
           email: form.email,
-          answers: JSON.stringify(answers),
+          answers: JSON.stringify({ ...answers, Q01_PHONE: form.phone }),
         }),
       });
       localStorage.setItem('visited_mypage', 'true');
