@@ -520,9 +520,13 @@ export default function AdminStatus() {
     const quota = quotas[templateId] || 60;
     const target = waiting.slice(0, quota - approved.length);
     if (target.length === 0) return;
-    if (!window.confirm(`상위 ${quota}명 기준, 대기 ${waiting.length}명 중 ${target.length}명을 승인하시겠습니까?\n(화이트리스트 회원은 배정 인원에서 제외됩니다)`)) return;
+    if (!window.confirm(`상위 ${quota}명 기준, 대기 ${waiting.length}명 중 ${target.length}명을 승인하고 나머지 ${waiting.length - target.length}명을 반려 처리하시겠습니까?`)) return;
     for (const r of target) {
       try { await api(`/applications/${r.id}/approve`, { method: 'PUT', body: '{}' }); } catch {}
+    }
+    const rejectTargets = waiting.slice(target.length);
+    for (const r of rejectTargets) {
+      try { await api(`/applications/${r.id}/reject`, { method: 'PUT', body: JSON.stringify({ reason: '배정 인원 초과' }) }); } catch {}
     }
     refreshTemplate(templateId);
   };
