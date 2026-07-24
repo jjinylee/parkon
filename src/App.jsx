@@ -7,6 +7,7 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import HomePage from './pages/user/HomePage';
 import RegisterPage from './pages/user/RegisterPage';
 import MyPage from './pages/user/MyPage';
+import ChangePasswordPage from './pages/user/ChangePasswordPage';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminCreate from './pages/admin/AdminCreate';
 import AdminCreateStep2 from './pages/admin/AdminCreateStep2';
@@ -43,6 +44,7 @@ function AppRoutes() {
       <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
       <Route path="/register" element={<ProtectedRoute><RegisterPage /></ProtectedRoute>} />
       <Route path="/mypage" element={<ProtectedRoute><MyPage /></ProtectedRoute>} />
+      <Route path="/change-password" element={<ProtectedRoute><ChangePasswordPage /></ProtectedRoute>} />
       <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminDashboard /></ProtectedRoute>} />
       <Route path="/admin/create" element={<ProtectedRoute requireAdmin><AdminCreate /></ProtectedRoute>} />
       <Route path="/admin/create/step2" element={<ProtectedRoute requireAdmin><AdminCreateStep2 /></ProtectedRoute>} />

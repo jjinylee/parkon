@@ -1,17 +1,17 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../AuthContext';
-import { api, logout } from '../../api';
+import { api } from '../../api';
 import UserHeader from '../../components/UserHeader';
 
 export default function MyPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const [form, setForm] = useState({ name: '', phone: '', email: '' });
   const [configQuestions, setConfigQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [answers, setAnswers] = useState({});
-  const [pwdForm, setPwdForm] = useState({ current_password: '', new_password: '', confirm_password: '' });
-  const [pwdSaving, setPwdSaving] = useState(false);
 
   useEffect(() => {
     Promise.all([
@@ -117,30 +117,6 @@ export default function MyPage() {
     }
   };
 
-  const handleChangePassword = async (e) => {
-    e.preventDefault();
-    if (pwdForm.new_password !== pwdForm.confirm_password) {
-      alert('새 비밀번호가 일치하지 않습니다.');
-      return;
-    }
-    setPwdSaving(true);
-    try {
-      await api('/auth/password', {
-        method: 'PUT',
-        body: JSON.stringify({
-          current_password: pwdForm.current_password,
-          new_password: pwdForm.new_password,
-        }),
-      });
-      alert('비밀번호가 변경되었습니다. 다시 로그인해주세요.');
-      logout();
-    } catch (err) {
-      alert(err.message || '오류가 발생했습니다.');
-    } finally {
-      setPwdSaving(false);
-    }
-  };
-
   if (loading) {
     return (
       <div className="bg-background min-h-screen">
@@ -197,23 +173,11 @@ export default function MyPage() {
               <span className="material-symbols-outlined text-primary">lock</span>
               비밀번호 변경
             </h2>
-            <form onSubmit={handleChangePassword} className="space-y-4 max-w-md">
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-text-sub">현재 비밀번호</label>
-                <input type="password" className="neumorphic-recessed p-3 rounded-lg border-none w-full" value={pwdForm.current_password} onChange={e => setPwdForm({ ...pwdForm, current_password: e.target.value })} required />
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-text-sub">새 비밀번호</label>
-                <input type="password" className="neumorphic-recessed p-3 rounded-lg border-none w-full" value={pwdForm.new_password} onChange={e => setPwdForm({ ...pwdForm, new_password: e.target.value })} required />
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-text-sub">새 비밀번호 확인</label>
-                <input type="password" className="neumorphic-recessed p-3 rounded-lg border-none w-full" value={pwdForm.confirm_password} onChange={e => setPwdForm({ ...pwdForm, confirm_password: e.target.value })} required />
-              </div>
-              <button type="submit" disabled={pwdSaving} className="px-6 py-2.5 bg-primary text-white font-bold rounded-lg text-sm disabled:opacity-50">
-                {pwdSaving ? '변경 중...' : '비밀번호 변경'}
-              </button>
-            </form>
+            <p className="text-sm text-text-sub mb-4">비밀번호는 별도 페이지에서 변경할 수 있습니다.</p>
+            <button onClick={() => navigate('/change-password')} className="px-6 py-2.5 border border-primary text-primary font-bold rounded-lg text-sm hover:bg-primary/5 inline-flex items-center gap-2">
+              <span className="material-symbols-outlined text-sm">lock_reset</span>
+              비밀번호 변경
+            </button>
           </section>
 
           {configQuestions.length > 0 && (
