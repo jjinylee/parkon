@@ -1,6 +1,6 @@
 # 주차ON 인증 플로우 설계서
 
-> 버전: v1.0 | 작성일: 2026-06-24
+> 버전: v1.1 | 작성일: 2026-07-24
 > 관련: API_SPEC.md §1 Auth, DB_SCHEMA.md §1 users
 
 ---
@@ -170,6 +170,53 @@ GET  /api/v1/health
 
 ---
 
+## 5.1 토큰 블랙리스트 (로그아웃)
+
+```js
+// services/blacklist.service.js
+- 로그아웃 시 JWT의 SHA-256 해시를 token_blacklist 테이블에 저장
+- auth 미들웨어에서 blacklist.isBlacklisted(token) 확인
+- 블랙리스트에 있으면 401 "로그아웃된 토큰입니다."
+- 만료된 블랙리스트는 서버 시작 시 + 1시간마다 자동 정리
+```
+
+---
+
+## 5.2 보안 헤더 (helmet)
+
+Express `helmet` 미들웨어 적용:
+
+| 헤더 | 값 |
+|:-----|:----|
+| X-Content-Type-Options | nosniff |
+| X-Frame-Options | SAMEORIGIN |
+| Strict-Transport-Security | max-age=15552000 |
+| X-XSS-Protection | 0 (브라우저 기본) |
+| X-DNS-Prefetch-Control | off |
+| Cross-Origin-Resource-Policy | cross-origin (파일 업로드용) |
+
+---
+
+## 5.3 Rate Limiting (express-rate-limit)
+
+| 엔드포인트 | 제한 | 초과 시 |
+|:-----------|:----:|:--------|
+| POST /auth/login | 분당 10회 (IP 기준) | 429 RATE_LIMIT |
+| POST /auth/signup | 분당 10회 (IP 기준) | 429 RATE_LIMIT |
+| POST /auth/forgot-password | 분당 10회 (IP 기준) | 429 RATE_LIMIT |
+| POST /auth/reset-password | 분당 10회 (IP 기준) | 429 RATE_LIMIT |
+
+계정 잠금 (DB 기반, IP 무관):
+
+| 조건 | 결과 |
+|:-----|:------|
+| 5회 연속 로그인 실패 | `locked_until` = now + 5분 |
+| 잠금 상태에서 로그인 시도 | 403 "5회 연속 로그인 실패로 ... 이후 로그인이 가능합니다." |
+| 잠금 만료 | `login_attempts = 0`, `locked_until = NULL` 초기화 |
+| 비밀번호 재설정 시 | lock 자동 해제 |
+
+---
+
 ## 6. 관리자 권한 미들웨어
 
 ```js
@@ -197,21 +244,77 @@ Authorization: Bearer <token>
 
 ### 처리 방식
 
-**옵션 A — 블랙리스트 (단기 토큰에 권장)**
-- 로그아웃한 토큰을 Redis/메모리 블랙리스트에 저장
-- auth 미들웨어에서 블랙리스트 확인
-- 단점: stateless하지 않음, 저장소 필요
-
-**옵션 B — 클라이언트 측 토큰 폐기 (선택)**
-- 서버는 아무것도 하지 않음
-- 클라이언트가 localStorage에서 토큰 삭제
-- 단점: 토큰이 만료 전까지 사용 가능
-
-> **Phase 2에서는 옵션 B로 진행** (추후 옵션 A로 전환 가능)
+**DB 블랙리스트 (Phase 2 적용)**
+- 로그아웃한 JWT의 SHA-256 해시를 `token_blacklist` 테이블에 저장
+- auth 미들웨어에서 `blacklist.isBlacklisted(token)` 확인
+- `tokenHash` + `userId` + `expiresAt` 함께 저장
+- 만료된 토큰은 서버 시작 시 + 1시간마다 `cleanExpired()`로 정리
+- 클라이언트도 localStorage에서 토큰/사용자 정보 삭제
 
 ---
 
-## 8. 토큰 갱신 전략
+## 8. 회원 탈퇴 (Withdraw)
+
+```
+POST /api/v1/auth/withdraw
+Authorization: Bearer <token>
+```
+
+### 처리流程
+
+| 단계 | 작업 |
+|:----:|:------|
+| 1 | JWT 인증 확인 |
+| 2 | `deleted_at IS NULL` 확인 |
+| 3 | 개인정보 비식별화: name='탈퇴한사용자', phone='', car_number='', email=더미 |
+| 4 | `deleted_at = datetime('now','localtime')` 설정, 로그인 불가 |
+
+---
+
+## 9. 비밀번호 변경 (Change Password)
+
+```
+PUT /api/v1/auth/password
+Authorization: Bearer <token>
+Content-Type: application/json
+
+{
+  "current_password": "oldPassword1!",
+  "new_password": "newPassword1!"
+}
+```
+
+### 처리流程
+
+| 단계 | 작업 |
+|:----:|:------|
+| 1 | JWT 인증 확인 + Joi 검증 (8자 이상, 영문+숫자+특수문자) |
+| 2 | 현재 비밀번호 bcrypt.compare 확인 (불일치 시 401) |
+| 3 | 새 비밀번호 bcrypt.hash 후 UPDATE |
+| 4 | 클라이언트에서 logout() 호출하여 재로그인 유도 |
+
+---
+
+## 10. 비밀번호 재설정 (Forgot / Reset Password)
+
+```
+POST /api/v1/auth/forgot-password    → 이메일 발송
+POST /api/v1/auth/reset-password     → 토큰 검증 후 변경
+```
+
+### 처리流程
+
+| 단계 | 작업 |
+|:----:|:------|
+| 1 | 이메일 입력 → users 조회 (존재하지 않아도 동일 메시지 반환, 사용자 존재 여부 노출 방지) |
+| 2 | crypto.randomBytes(32) 토큰 생성, `reset_token`/`reset_expires`(1시간) 저장 |
+| 3 | DB SMTP 설정(from_email)으로 재설정 링크 이메일 발송 |
+| 4 | 토큰 검증 → 만료 확인 → bcrypt hash 후 password UPDATE |
+| 5 | `login_attempts = 0, locked_until = NULL` 초기화 (잠금 해제) |
+
+---
+
+## 11. 토큰 갱신 전략
 
 > Phase 2에서는 refresh token 없이 access token만 사용
 > Phase 4에서 refresh token 도입 검토
@@ -224,7 +327,7 @@ Authorization: Bearer <token>
 
 ---
 
-## 9. 상태 다이어그램
+## 12. 상태 다이어그램
 
 ```
                     ┌──────────┐
@@ -246,14 +349,19 @@ Authorization: Bearer <token>
 
 ---
 
-## 10. 보안 고려사항
+## 13. 보안 고려사항
 
 | 항목 | 적용 |
-|:-----|:-----|
+|:-----|:------|
 | 비밀번호 해싱 | bcrypt (salt rounds: 10) |
 | JWT 시크릿 | 환경변수, 프로덕션에서 64바이트 랜덤 문자열 |
-| 토큰 만료 | 24h (단기) |
-| rate limiting | 로그인 5회/분 실패 시 429 (express-rate-limit) |
+| 토큰 만료 | 24h |
+| 토큰 블랙리스트 | 로그아웃 시 DB 저장, auth 미들웨어에서 차단 |
+| rate limiting | 인증 API 분당 10회 (express-rate-limit) |
+| 계정 잠금 | 5회 연속 실패 시 5분 lock (login_attempts) |
+| 보안 헤더 | helmet 미들웨어 (HSTS, X-Frame-Options 등) |
+| PII 암호화 | 전화번호/차량번호 AES-256-CBC 암호화 저장 |
+| 개인정보 열람 로그 | privacy_audit_log에 모든 조회 기록 |
 | 입력 검증 | 모든 입력 Joi 검증 (SQL Injection 방지) |
 | HTTPS | 프로덕션에서 필수 |
-| 민감 정보 로깅 금지 | 비밀번호/토큰은 로그에 포함 금지 |
+| 민감 정보 로깅 금지 | 비밀번호/토큰/복호화된 PII는 로그에 포함 금지 |

@@ -4,8 +4,8 @@
 
 | 항목 | 내용 |
 | :--- | :--- |
-| 버전 | v1.4 |
-| 작성일 | 2026-07-01 |
+| 버전 | v1.5 |
+| 작성일 | 2026-07-24 |
 | Base URL | `/api/v1` |
 
 ---
@@ -26,6 +26,12 @@
 ### 인증
 - 모든 요청은 `Authorization: Bearer <token>` 헤더 필요 (로그인除外)
 - JWT 기반 인증, 만료 24시간
+- 로그아웃 시 토큰 블랙리스트 등록 (DB 기반, 만료 시 자동 정리)
+
+### Rate Limiting
+- 인증 관련 엔드포인트(`/auth/login`, `/auth/signup`, `/auth/forgot-password`, `/auth/reset-password`): **분당 10회** 제한 (IP 기준)
+- 초과 시 `429` 응답: `{ code: "RATE_LIMIT", message: "너무 많은 요청입니다." }`
+- 계정 잠금: 로그인 **5회 연속 실패** 시 해당 계정 **5분간 잠금** (DB `login_attempts` + `locked_until`)
 
 ### 응답 형식
 ```json
@@ -86,9 +92,11 @@
 ---
 
 ### POST /auth/logout
-로그아웃 (토큰 폐기)
+로그아웃 (토큰 블랙리스트 등록)
 
-**Headers**: Authorization
+**Headers**: Authorization: Bearer \<token\>
+
+**처리**: 해당 JWT를 `token_blacklist` 테이블에 SHA-256 해시로 저장, 만료 시 자동 정리
 
 ---
 
@@ -124,6 +132,36 @@
 | 필드 | 타입 | 필수 | 설명 |
 |:-----|:-----|:----:|:-----|
 | status | string | Y | approved / blocked |
+
+---
+
+### GET /users/export
+사용자 목록 CSV 다운로드 (관리자)
+
+**Response**: `Content-Type: text/csv` — UTF-8 BOM 포함
+
+**컬럼**: 이름, 이메일, 전화번호, 권한, 상태, 가입일
+
+---
+
+### POST /auth/withdraw
+회원 탈퇴 (본인)
+
+**Headers**: Authorization: Bearer \<token\>
+
+**처리**: 이름→'탈퇴한사용자', 전화번호/차량번호 삭제, 이메일 더미처리, `deleted_at` 설정
+
+---
+
+### PUT /auth/password
+비밀번호 변경 (본인)
+
+**Headers**: Authorization: Bearer \<token\>
+
+| 필드 | 타입 | 필수 | 설명 |
+|:-----|:-----|:----:|:-----|
+| current_password | string | Y | 현재 비밀번호 |
+| new_password | string | Y | 새 비밀번호 (8자 이상, 영문+숫자+특수문자) |
 
 ---
 
@@ -277,6 +315,19 @@
 ```
 
 > `position`/`join_date`/`special_reason`/`special_reason_text`는 `application_answers` EAV 데이터를 sort_order 기준 PIVOT JOIN하여 조회 (sort_order=3=직책, 4=입사일자, 9=특수사유)
+
+---
+
+### GET /applications/admin/export
+신청 목록 CSV 다운로드 (관리자)
+
+| Query | 타입 | 필수 | 설명 |
+|:------|:-----|:----:|:-----|
+| template_id | int | Y | 템플릿 ID |
+
+**Response**: `Content-Type: text/csv` — UTF-8 BOM 포함
+
+**컬럼**: 순번, 이름, 전화번호, 차량번호, 총점, 상태, 화이트리스트, 제출일
 
 ---
 
@@ -506,3 +557,93 @@
 
 ### DELETE /templates/:id/files/:fileId
 첨부파일 삭제 (관리자)
+
+---
+
+## 13. SMTP Config (SMTP 설정) — 슈퍼관리자 전용
+
+### GET /config/smtp
+SMTP 설정 조회 (비밀번호는 masked 처리)
+
+**Response**
+```json
+{
+  "host": "smtp.gmail.com",
+  "port": 587,
+  "secure": false,
+  "user": "admin@company.com",
+  "from_email": "parkon@company.com",
+  "password": "****"
+}
+```
+
+---
+
+### PUT /config/smtp
+SMTP 설정 저장
+
+| 필드 | 타입 | 필수 | 설명 |
+|:-----|:-----|:----:|:-----|
+| host | string | Y | SMTP 호스트 |
+| port | int | Y | 포트 |
+| secure | boolean | Y | SSL 사용 여부 |
+| user | string | Y | SMTP 사용자 |
+| password | string | Y | SMTP 비밀번호 |
+| from_email | string | Y | 발신 이메일 |
+
+> `password`는 AES-256-CBC 암호화하여 `smtp_config` 테이블에 저장
+
+---
+
+### POST /config/smtp/test
+SMTP 연결 테스트 (설정 저장 후 테스트 메일 발송)
+
+---
+
+## 14. Audit Log (개인정보 열람 로그) — 슈퍼관리자 전용
+
+### GET /admin/audit
+개인정보 열람 이력 조회
+
+| Query | 타입 | 설명 |
+|:------|:-----|:-----|
+| page | int | 페이지 번호 |
+| limit | int | 페이지 크기 |
+
+**Response**
+```json
+{
+  "total": 100,
+  "page": 1,
+  "limit": 20,
+  "items": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "admin_name": "김광호",
+      "action": "VIEW_USER_LIST",
+      "target_type": "users",
+      "target_id": null,
+      "detail": "검색: 전체",
+      "ip_address": "::1",
+      "created_at": "2026-07-01 09:00:00"
+    }
+  ]
+}
+```
+
+> 개인정보(전화번호, 차량번호)를 조회/복호화하는 모든 관리자 액션은 자동 기록됨
+
+---
+
+## 15. Admin Managers (관리자 관리) — 슈퍼관리자 전용
+
+### POST /admin/managers
+관리자 등록
+
+| 필드 | 타입 | 필수 | 설명 |
+|:-----|:-----|:----:|:-----|
+| user_id | int | Y | 사용자 ID |
+| role | string | Y | `admin` 또는 `super_admin` |
+
+> managers.routes.js는 requireSuperAdmin 미들웨어 적용

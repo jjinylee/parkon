@@ -1,6 +1,6 @@
 # 주차ON 데이터베이스 스키마 (SQLite)
 
-> 버전: v1.4 | 작성일: 2026-07-01 | DB: SQLite 3.x
+> 버전: v1.5 | 작성일: 2026-07-24 | DB: SQLite 3.x
 
 ---
 
@@ -10,21 +10,28 @@
 |:-------|:-----|:---------|:-----|
 | id | INTEGER | PK, AUTOINCREMENT | 사용자 고유 ID |
 | name | TEXT | NOT NULL | 이름 |
-| phone | TEXT | NOT NULL, UNIQUE | 전화번호 |
+| phone | TEXT | NOT NULL | 전화번호 (AES-256-CBC 암호화) |
+| phone_hash | TEXT | NULL | phone SHA-256 해시 (중복체크/whitelist 조인용) |
 | email | TEXT | NOT NULL, UNIQUE | 회사 이메일 |
 | password | TEXT | NOT NULL | 비밀번호 (bcrypt 해시) |
 | role | TEXT | NOT NULL, DEFAULT 'user', CHECK(role IN ('user','admin','super_admin')) | 권한 |
 | status | TEXT | NOT NULL, DEFAULT 'pending', CHECK(status IN ('pending','approved','blocked')) | 가입 상태 |
-| car_number | TEXT | NULL | 차량번호 (MyPage 저장) |
+| car_number | TEXT | NULL | 차량번호 (AES-256-CBC 암호화) |
+| car_number_hash | TEXT | NULL | car_number SHA-256 해시 |
 | mypage_answers | TEXT | NULL | 마이페이지 질문답변 JSON |
+| login_attempts | INTEGER | DEFAULT 0 | 로그인 실패 횟수 |
+| locked_until | TEXT | NULL | 계정 잠금 만료 시간 |
+| reset_token | TEXT | NULL | 비밀번호 재설정 토큰 |
+| reset_expires | TEXT | NULL | 재설정 토큰 만료 시간 |
 | blocked_at | TEXT | NULL | 차단일 (ISO 8601) |
 | created_at | TEXT | NOT NULL, DEFAULT (datetime('now','localtime')) | 가입일 |
 | updated_at | TEXT | NULL | 수정일 |
 | deleted_at | TEXT | NULL | 삭제일 (소프트 삭제) |
 
 > **status 설명**: `pending`=가입대기, `approved`=승인완료, `blocked`=차단
-> 최초 가입시 status=pending, 관리자 승인 후 status=approved
-> blocked_at은 status='blocked'일 때 기록
+> `phone`/`car_number`는 AES-256-CBC 암호화 저장, 중복체크와 whitelist 조인은 SHA-256 hash 사용
+> `login_attempts` >= 5 시 `locked_until` 설정, 해당 시간까지 로그인 불가
+> `reset_token`/`reset_expires`는 비밀번호 찾기 시 1시간 유효
 
 ```sql
 CREATE TABLE IF NOT EXISTS users (
@@ -470,7 +477,68 @@ CREATE INDEX IF NOT EXISTS idx_attachments_template ON template_attachments(temp
 
 ---
 
-## 14. MySQL → SQLite 변환 참고
+## 14. token_blacklist — 로그아웃 토큰 블랙리스트
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+|:-------|:-----|:---------|:-----|
+| id | INTEGER | PK, AUTOINCREMENT | ID |
+| token_hash | TEXT | NOT NULL | JWT SHA-256 해시 |
+| user_id | INTEGER | NOT NULL | 소유 사용자 ID |
+| expires_at | TEXT | NOT NULL | 토큰 만료 시간 |
+| created_at | TEXT | NOT NULL, DEFAULT (datetime('now','localtime')) | 로그아웃 시간 |
+
+```sql
+CREATE TABLE IF NOT EXISTS token_blacklist (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  token_hash TEXT NOT NULL,
+  user_id INTEGER NOT NULL,
+  expires_at TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_token_blacklist_hash ON token_blacklist(token_hash);
+CREATE INDEX IF NOT EXISTS idx_token_blacklist_expires ON token_blacklist(expires_at);
+```
+
+> auth 미들웨어에서 blacklist 조회 후 블랙리스트에 있으면 401 응답
+> 만료된 토큰은 서버 시작 시 + 1시간마다 자동 정리
+
+---
+
+## 15. smtp_config — SMTP 설정 (single-row)
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+|:-------|:-----|:---------|:-----|
+| id | INTEGER | PK, DEFAULT 1 | 단일 행 고정 (id=1) |
+| host | TEXT | NOT NULL | SMTP 호스트 |
+| port | INTEGER | NOT NULL | 포트 |
+| secure | INTEGER | NOT NULL, DEFAULT 0 | SSL 사용 여부 |
+| user | TEXT | NOT NULL | SMTP 계정 |
+| password | TEXT | NOT NULL | AES-256-CBC 암호화 저장 |
+| from_email | TEXT | NOT NULL | 발신 이메일 |
+| updated_at | TEXT | NOT NULL | 수정일 |
+
+> 슈퍼관리자만 CRUD 가능, `mail-send.service.js`에서 DB 설정 우선 사용
+
+---
+
+## 16. privacy_audit_log — 개인정보 열람 로그
+
+| 컬럼명 | 타입 | 제약조건 | 설명 |
+|:-------|:-----|:---------|:-----|
+| id | INTEGER | PK, AUTOINCREMENT | 로그 ID |
+| user_id | INTEGER | NOT NULL | 수행 관리자 ID |
+| action | TEXT | NOT NULL | 액션 코드 |
+| target_type | TEXT | NULL | 대상 테이블명 |
+| target_id | INTEGER | NULL | 대상 레코드 ID |
+| detail | TEXT | NULL | 상세 내용 |
+| ip_address | TEXT | NULL | 요청 IP |
+| created_at | TEXT | NOT NULL | 시간 |
+
+> 개인정보(phone/car_number)를 복호화/조회하는 모든 관리자 동작 기록
+
+---
+
+## 17. MySQL → SQLite 변환 참고
 
 | MySQL | SQLite |
 |:------|:-------|
