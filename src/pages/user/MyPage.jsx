@@ -25,8 +25,7 @@ export default function MyPage() {
           phone,
           email: myData.user?.email || '',
         });
-        const allQuestions = config.questions || [];
-        setConfigQuestions(allQuestions.filter(q => q.question_id !== 'Q01_PHONE'));
+        setConfigQuestions(config.questions || []);
         const loaded = myData.mypage_answers || {};
         if (phone && !loaded.Q01_PHONE) loaded.Q01_PHONE = phone;
         setAnswers(loaded);
