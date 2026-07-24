@@ -11,7 +11,7 @@ function list({ status }) {
   }
 
   const items = db.prepare(`
-    SELECT t.id, t.title, t.status, t.start_date, t.end_date, t.created_by,
+    SELECT t.id, t.title, t.description, t.status, t.start_date, t.end_date, t.created_by,
            u.name AS author, t.created_at
     FROM application_templates t
     JOIN users u ON u.id = t.created_by
