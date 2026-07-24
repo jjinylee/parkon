@@ -1,26 +1,35 @@
 import { Link, useLocation } from 'react-router-dom';
-
-const menu = [
-  {
-    title: '신청 관리',
-    items: [
-      { icon: 'add_box', label: '신청 개설', to: '/admin' },
-      { icon: 'pending_actions', label: '신청 승인', to: '/admin/status' },
-    ],
-  },
-  {
-    title: '설정 관리',
-    items: [
-      { icon: 'verified_user', label: '화이트리스트', to: '/admin/whitelist' },
-      { icon: 'people', label: '사용자 관리', to: '/admin/users' },
-      { icon: 'mail', label: '메일 설정', to: '/admin/mail' },
-      { icon: 'admin_panel_settings', label: '관리자 관리', to: '/admin/managers' },
-      { icon: 'playlist_add_check', label: '질문항목 관리', to: '/admin/questions' },
-    ],
-  },
-];
+import { useAuth } from '../AuthContext';
 
 function MenuNav({ path, onLinkClick }) {
+  const { isSuperAdmin } = useAuth();
+  const menu = [
+    {
+      title: '신청 관리',
+      items: [
+        { icon: 'add_box', label: '신청 개설', to: '/admin' },
+        { icon: 'pending_actions', label: '신청 승인', to: '/admin/status' },
+      ],
+    },
+    {
+      title: '설정 관리',
+      items: [
+        { icon: 'verified_user', label: '화이트리스트', to: '/admin/whitelist' },
+        { icon: 'people', label: '사용자 관리', to: '/admin/users' },
+        { icon: 'mail', label: '메일 설정', to: '/admin/mail' },
+        { icon: 'playlist_add_check', label: '질문항목 관리', to: '/admin/questions' },
+      ],
+    },
+    {
+      title: '시스템 보안/관리',
+      items: [
+        { icon: 'admin_panel_settings', label: '관리자 관리', to: '/admin/managers' },
+        ...(isSuperAdmin ? [{ icon: 'settings', label: 'SMTP 설정', to: '/admin/smtp' }] : []),
+        ...(isSuperAdmin ? [{ icon: 'visibility', label: '개인정보 로그', to: '/admin/audit' }] : []),
+      ],
+    },
+  ];
+
   return (
     <nav className="flex-1 px-4 py-6 space-y-6 overflow-y-auto">
       {menu.map((group) => (

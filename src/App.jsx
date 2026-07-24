@@ -20,10 +20,13 @@ import AdminManagers from './pages/admin/AdminManagers';
 import AdminCopyPage from './pages/admin/AdminCopyPage';
 import AdminDetailPage from './pages/admin/AdminDetailPage';
 import AdminQuestionConfig from './pages/admin/AdminQuestionConfig';
+import AdminSmtpConfig from './pages/admin/AdminSmtpConfig';
+import AdminAuditLog from './pages/admin/AdminAuditLog';
 
-function ProtectedRoute({ children, requireAdmin }) {
-  const { isLoggedIn, isAdmin } = useAuth();
+function ProtectedRoute({ children, requireAdmin, requireSuperAdmin }) {
+  const { isLoggedIn, isAdmin, isSuperAdmin } = useAuth();
   if (!isLoggedIn) return <Navigate to="/login" replace />;
+  if (requireSuperAdmin && !isSuperAdmin) return <Navigate to="/" replace />;
   if (requireAdmin && !isAdmin) return <Navigate to="/" replace />;
   return children;
 }
@@ -52,6 +55,8 @@ function AppRoutes() {
       <Route path="/admin/managers" element={<ProtectedRoute requireAdmin><AdminManagers /></ProtectedRoute>} />
       <Route path="/admin/templates/:templateId" element={<ProtectedRoute requireAdmin><AdminDetailPage /></ProtectedRoute>} />
       <Route path="/admin/questions" element={<ProtectedRoute requireAdmin><AdminQuestionConfig /></ProtectedRoute>} />
+      <Route path="/admin/smtp" element={<ProtectedRoute requireSuperAdmin><AdminSmtpConfig /></ProtectedRoute>} />
+      <Route path="/admin/audit" element={<ProtectedRoute requireSuperAdmin><AdminAuditLog /></ProtectedRoute>} />
     </Routes>
   );
 }

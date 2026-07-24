@@ -1,6 +1,7 @@
 const db = require('../config/database');
 const { NotFoundError, AppError } = require('../utils/errors');
 const logger = require('../utils/logger');
+const { encrypt, decrypt, hash: piiHash } = require('../utils/encrypt');
 
 function list({ status, search, page, limit }) {
   let where = 'WHERE deleted_at IS NULL';
@@ -20,6 +21,10 @@ function list({ status, search, page, limit }) {
   const items = db.prepare(
     `SELECT id, name, email, phone, role, status, blocked_at, created_at FROM users ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`
   ).all(...params, limit, offset);
+
+  for (const item of items) {
+    item.phone = decrypt(item.phone);
+  }
 
   return { total, page, limit, items };
 }
@@ -41,6 +46,31 @@ function updateStatus(id, status, adminId) {
 
   logger.info(`User status updated: userId=${id}, newStatus=${status}, by=${adminId}`);
   return { id, status };
+}
+
+function withdraw(userId) {
+  const user = db.prepare('SELECT id, email FROM users WHERE id = ? AND deleted_at IS NULL').get(userId);
+  if (!user) throw new NotFoundError('사용자를 찾을 수 없습니다.');
+
+  const dummyEmail = `withdrawn_${userId}_${Date.now()}@deleted`;
+  db.prepare(`
+    UPDATE users SET
+      name = '탈퇴한사용자',
+      phone = '',
+      phone_hash = '',
+      car_number = '',
+      car_number_hash = '',
+      email = ?,
+      password = '',
+      role = 'user',
+      status = 'blocked',
+      deleted_at = datetime('now','localtime'),
+      updated_at = datetime('now','localtime')
+    WHERE id = ?
+  `).run(dummyEmail, userId);
+
+  logger.info(`User withdrawn: userId=${userId}`);
+  return { id: userId };
 }
 
 module.exports = { list, updateStatus };

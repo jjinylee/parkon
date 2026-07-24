@@ -8,4 +8,9 @@ __pycache__/
 server/data/
 server/uploads/
 server/.env
+server/.env.production
 *:Zone.Identifier
+TEST_REPORT.md
+on.html
+ui-test.py
+표준레이아웃설계서.md

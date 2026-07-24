@@ -13,6 +13,7 @@ export default function AdminManagers() {
   const [search, setSearch] = useState("");
   const [managers, setManagers] = useState([]);
   const [users, setUsers] = useState([]);
+  const [selectedRole, setSelectedRole] = useState('admin');
 
   useEffect(() => {
     api("/admin/managers").then(d => setManagers(d.items || [])).catch(() => {});
@@ -64,26 +65,32 @@ export default function AdminManagers() {
             <div className="overflow-x-auto custom-scrollbar">
               <table className="w-full text-left">
               <thead className="bg-surface-container text-xs font-bold">
-                <tr className="border-b">
-                  <th className="p-4 w-12 text-center"><input type="checkbox" /></th>
-                  <th className="p-4">이름</th>
-                  <th className="p-4">이메일</th>
-                  <th className="p-4">등록일</th>
-                  <th className="p-4 w-20 text-center">관리</th>
-                </tr>
-              </thead>
-              <tbody className="text-sm">
-                {managers.map(m => (
-                  <tr key={m.id} className="border-b hover:bg-[#F8F9FF]">
-                    <td className="p-4 text-center"><input type="checkbox" checked={selected.has(m.id)} onChange={() => toggleSelect(m.id)} /></td>
-                    <td className="p-4 font-medium">{m.name}</td>
-                    <td className="p-4 text-text-sub">{m.email}</td>
-                    <td className="p-4 text-text-sub">{m.created_at}</td>
-                    <td className="p-4 text-center">
-                      <button onClick={async () => { if(confirm("해제하시겠습니까?")) { await api("/admin/managers/" + m.user_id, { method: "DELETE" }); setManagers(prev => prev.filter(x => x.id !== m.id)); } }} className="px-2 py-1 bg-danger-container text-danger rounded text-xs font-bold">해제</button>
-                    </td>
+                  <tr className="border-b">
+                    <th className="p-4 w-12 text-center"><input type="checkbox" /></th>
+                    <th className="p-4">이름</th>
+                    <th className="p-4">이메일</th>
+                    <th className="p-4">권한</th>
+                    <th className="p-4">등록일</th>
+                    <th className="p-4 w-20 text-center">관리</th>
                   </tr>
-                ))}
+                </thead>
+                <tbody className="text-sm">
+                  {managers.map(m => (
+                    <tr key={m.id} className="border-b hover:bg-[#F8F9FF]">
+                      <td className="p-4 text-center"><input type="checkbox" checked={selected.has(m.id)} onChange={() => toggleSelect(m.id)} /></td>
+                      <td className="p-4 font-medium">{m.name}</td>
+                      <td className="p-4 text-text-sub">{m.email}</td>
+                      <td className="p-4">
+                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${m.role === 'super_admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'}`}>
+                          {m.role === 'super_admin' ? '슈퍼관리자' : '일반관리자'}
+                        </span>
+                      </td>
+                      <td className="p-4 text-text-sub">{m.created_at}</td>
+                      <td className="p-4 text-center">
+                        <button onClick={async () => { if(confirm("해제하시겠습니까?")) { await api("/admin/managers/" + m.user_id, { method: "DELETE" }); setManagers(prev => prev.filter(x => x.id !== m.id)); } }} className="px-2 py-1 bg-danger-container text-danger rounded text-xs font-bold">해제</button>
+                      </td>
+                    </tr>
+                  ))}
               </tbody>
             </table>
             </div>
@@ -107,6 +114,17 @@ export default function AdminManagers() {
                 <span className="material-symbols-outlined text-sm">search</span>조회
               </button>
             </div>
+            <div className="p-4 border-b flex items-center gap-3">
+              <span className="text-sm font-bold text-text-main">권한:</span>
+              <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                <input type="radio" name="role" value="admin" checked={selectedRole === 'admin'} onChange={() => setSelectedRole('admin')} />
+                일반관리자
+              </label>
+              <label className="flex items-center gap-1.5 text-sm cursor-pointer">
+                <input type="radio" name="role" value="super_admin" checked={selectedRole === 'super_admin'} onChange={() => setSelectedRole('super_admin')} />
+                슈퍼관리자
+              </label>
+            </div>
             <div className="flex-1 overflow-y-auto p-6">
               <table className="w-full text-left">
                 <thead className="bg-surface-container text-xs font-bold">
@@ -122,7 +140,7 @@ export default function AdminManagers() {
                       <td className="p-4 font-medium">{u.name}</td>
                       <td className="p-4 text-text-sub">{u.email}</td>
                       <td className="p-4 text-center">
-                        <button onClick={async () => { await api("/admin/managers", { method: "POST", body: JSON.stringify({user_id: u.id}) }); setShowModal(false); location.reload(); }} className="px-3 py-1 bg-primary text-white rounded text-xs font-bold">선택</button>
+                        <button onClick={async () => { await api("/admin/managers", { method: "POST", body: JSON.stringify({user_id: u.id, role: selectedRole}) }); setShowModal(false); location.reload(); }} className="px-3 py-1 bg-primary text-white rounded text-xs font-bold">선택</button>
                       </td>
                     </tr>
                   ))}

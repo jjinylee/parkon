@@ -5,21 +5,25 @@ const db = require('../config/database');
 const authConfig = require('../config/auth');
 const { AuthError, ForbiddenError, ConflictError, NotFoundError, AppError } = require('../utils/errors');
 const logger = require('../utils/logger');
+const { encrypt, hash: piiHash } = require('../utils/encrypt');
 const { getTransporter } = require('./mail-send.service');
+const smtpService = require('./smtp.service');
 
 const LOCK_THRESHOLD = 5;
 const LOCK_DURATION_MINUTES = 5;
 const RESET_EXPIRY_HOURS = 1;
 
 async function signup({ name, phone, email, password }) {
-  const existing = db.prepare('SELECT id FROM users WHERE email = ? OR phone = ?').get(email, phone);
+  const phoneHash = piiHash(phone);
+  const existing = db.prepare('SELECT id FROM users WHERE email = ? OR phone_hash = ?').get(email, phoneHash);
   if (existing) {
     throw new ConflictError('이미 등록된 이메일 또는 전화번호입니다.');
   }
   const hash = await bcrypt.hash(password, 10);
+  const encryptedPhone = encrypt(phone);
   const result = db.prepare(
-    'INSERT INTO users (name, phone, email, password, role, status) VALUES (?, ?, ?, ?, ?, ?)'
-  ).run(name, phone, email, hash, 'user', 'pending');
+    'INSERT INTO users (name, phone, phone_hash, email, password, role, status) VALUES (?, ?, ?, ?, ?, ?, ?)'
+  ).run(name, encryptedPhone, phoneHash, email, hash, 'user', 'pending');
   logger.info(`User signed up: id=${result.lastInsertRowid}, email=${email}`);
   return { id: result.lastInsertRowid, status: 'pending' };
 }
@@ -100,8 +104,9 @@ async function forgotPassword({ email }) {
   const html = `<p>안녕하세요, ${user.name}님.</p><p>비밀번호 재설정을 요청하셨습니다.</p><p>아래 링크를 클릭하여 새 비밀번호를 설정해주세요.</p><p><a href="${resetLink}">${resetLink}</a></p><p>이 링크는 1시간 후 만료됩니다.</p><p>본인이 요청하지 않았다면 이 메일을 무시해주세요.</p>`;
 
   const transporter = getTransporter();
-  const from = process.env.SMTP_FROM || 'parkon@company.com';
-  await transporter.sendMail({ from, to: user.email, subject: '[ParkON] 비밀번호 재설정 안내', html });
+  const dbCfg = smtpService.getDecryptedConfig();
+  const from = dbCfg?.from_email || process.env.SMTP_FROM || 'parkon@company.com';
+  await transporter.sendMail({ from, to: user.email, subject: '[주차신청] 비밀번호 재설정 안내', html });
 
   logger.info(`Password reset email sent: id=${user.id}, email=${email}`);
   return { message: '비밀번호 재설정 링크를 이메일로 발송했습니다.' };

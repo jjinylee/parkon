@@ -11,6 +11,7 @@ const statsRoutes = require('./stats.routes');
 const mypageRoutes = require('./mypage.routes');
 const configRoutes = require('./config.routes');
 const filesRoutes = require('./files.routes');
+const auditRoutes = require('./audit.routes');
 
 const router = Router();
 
@@ -29,5 +30,6 @@ router.use('/stats', statsRoutes);
 router.use('/admin/managers', managersRoutes);
 router.use('/config', configRoutes);
 router.use('/files', filesRoutes);
+router.use('/admin/audit', auditRoutes);
 
 module.exports = router;

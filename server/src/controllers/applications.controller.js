@@ -1,6 +1,7 @@
 const Joi = require('joi');
 const { AppError } = require('../utils/errors');
 const applicationsService = require('../services/applications.service');
+const auditService = require('../services/audit.service');
 const { success } = require('../utils/response');
 
 const createSchema = Joi.object({
@@ -42,6 +43,9 @@ async function getById(req, res, next) {
     if (result.user_id !== req.user.userId && req.user.role === 'user') {
       throw new AppError('FORBIDDEN', '본인의 신청만 조회할 수 있습니다.', 403);
     }
+    if (req.user.role !== 'user') {
+      auditService.log(req.user.userId, 'VIEW_APPLICATION_DETAIL', 'applications', Number(req.params.id), '', req.ip);
+    }
     return success(res, result);
   } catch (err) { next(err); }
 }
@@ -79,6 +83,7 @@ async function getAdminList(req, res, next) {
       status, search, sort_by, sort_order,
       page: Number(page), limit: Number(limit),
     });
+    auditService.log(req.user.userId, 'VIEW_APPLICATION_LIST', 'applications', null, `template_id: ${template_id || 'all'}, 검색: ${search || ''}`, req.ip);
     return success(res, result);
   } catch (err) { next(err); }
 }

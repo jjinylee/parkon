@@ -8,6 +8,7 @@ const createSchema = Joi.object({
     'any.required': '사용자 ID는 필수입니다.',
     'number.base': '사용자 ID는 숫자여야 합니다.',
   }),
+  role: Joi.string().valid('admin', 'super_admin').default('admin'),
 });
 
 async function list(req, res, next) {
@@ -27,7 +28,7 @@ async function create(req, res, next) {
       const messages = error.details.map(d => d.message).join(', ');
       throw new AppError('VALIDATION_ERROR', messages, 400);
     }
-    const result = managersService.create(value.user_id, req.user.userId);
+    const result = managersService.create(value.user_id, req.user.userId, value.role);
     return success(res, result, '관리자가 지정되었습니다.', 201);
   } catch (err) {
     next(err);

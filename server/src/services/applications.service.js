@@ -1,6 +1,7 @@
 const db = require('../config/database');
 const { NotFoundError, AppError, ForbiddenError } = require('../utils/errors');
 const logger = require('../utils/logger');
+const { decrypt } = require('../utils/encrypt');
 
 function getUserApplications(userId, status) {
   let where = 'WHERE pa.user_id = ?';
@@ -181,7 +182,7 @@ function getAdminList({ template_id, status, search, sort_by, sort_order, page, 
     FROM parking_applications pa
     JOIN users u ON u.id = pa.user_id
     JOIN application_templates t ON t.id = pa.template_id
-    LEFT JOIN whitelist w ON w.car_number = u.car_number
+    LEFT JOIN whitelist w ON w.car_number_hash = u.car_number_hash
     LEFT JOIN application_answers aa ON aa.application_id = pa.id
     LEFT JOIN application_questions aq ON aq.id = aa.question_id AND aq.template_id = pa.template_id
     LEFT JOIN question_options o ON o.id = aa.option_id
@@ -190,6 +191,11 @@ function getAdminList({ template_id, status, search, sort_by, sort_order, page, 
     ORDER BY ${sortCol} ${sortDir}
     LIMIT ? OFFSET ?
   `).all(...params, limit, offset);
+
+  for (const item of items) {
+    item.phone = decrypt(item.phone);
+    item.car_number = decrypt(item.car_number);
+  }
 
   return { total, page, limit, items };
 }

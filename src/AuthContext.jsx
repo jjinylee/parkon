@@ -21,10 +21,11 @@ export function AuthProvider({ children }) {
 
   const isLoggedIn = !!user;
   const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+  const isSuperAdmin = user?.role === 'super_admin';
   const isPending = user?.status === 'pending';
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoggedIn, isAdmin, isPending }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoggedIn, isAdmin, isSuperAdmin, isPending }}>
       {children}
     </AuthContext.Provider>
   );

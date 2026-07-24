@@ -1,12 +1,15 @@
 const nodemailer = require('nodemailer');
 const db = require('../config/database');
 const logger = require('../utils/logger');
+const smtpService = require('./smtp.service');
 
 function getTransporter() {
-  const host = process.env.SMTP_HOST || 'localhost';
-  const port = parseInt(process.env.SMTP_PORT || '1025', 10);
-  const user = process.env.SMTP_USER || '';
-  const pass = process.env.SMTP_PASS || '';
+  const dbCfg = smtpService.getDecryptedConfig();
+
+  const host = dbCfg?.host || process.env.SMTP_HOST || 'localhost';
+  const port = dbCfg?.port || parseInt(process.env.SMTP_PORT || '1025', 10);
+  const user = dbCfg?.user || process.env.SMTP_USER || '';
+  const pass = dbCfg?.pass || process.env.SMTP_PASS || '';
 
   if (!user && !pass) {
     return nodemailer.createTransport({ host, port, ignoreTLS: true });
@@ -38,7 +41,8 @@ async function send({ template_id, application_ids, type, adminId }) {
   `).all(...application_ids);
 
   const transporter = getTransporter();
-  const from = process.env.SMTP_FROM || 'parkon@company.com';
+  const dbCfg = smtpService.getDecryptedConfig();
+  const from = dbCfg?.from_email || process.env.SMTP_FROM || 'parkon@company.com';
   const results = [];
 
   for (const app of apps) {

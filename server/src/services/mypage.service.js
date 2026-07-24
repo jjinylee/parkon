@@ -1,6 +1,7 @@
 const db = require('../config/database');
 const { NotFoundError, ConflictError } = require('../utils/errors');
 const logger = require('../utils/logger');
+const { encrypt, decrypt, hash: piiHash } = require('../utils/encrypt');
 
 function get(userId) {
   const user = db.prepare('SELECT id, name, phone, email, role, status, mypage_answers FROM users WHERE id = ? AND deleted_at IS NULL').get(userId);
@@ -9,6 +10,8 @@ function get(userId) {
   let mypageAnswers = {};
   try { mypageAnswers = user.mypage_answers ? JSON.parse(user.mypage_answers) : {}; } catch (e) {}
   delete user.mypage_answers;
+
+  user.phone = decrypt(user.phone);
 
   const answers = db.prepare(`
     SELECT aa.*, q.question_text, q.input_type, q.sort_order
@@ -24,8 +27,18 @@ function get(userId) {
 
 function update(userId, { phone, car_number, email, answers }) {
   const sets = []; const params = [];
-  if (phone !== undefined) { sets.push('phone = ?'); params.push(phone); }
-  if (car_number !== undefined) { sets.push('car_number = ?'); params.push(car_number); }
+  if (phone !== undefined) {
+    const encryptedPhone = encrypt(phone);
+    const phoneHash = piiHash(phone);
+    sets.push('phone = ?'); params.push(encryptedPhone);
+    sets.push('phone_hash = ?'); params.push(phoneHash);
+  }
+  if (car_number !== undefined) {
+    const encryptedCar = encrypt(car_number);
+    const carHash = piiHash(car_number);
+    sets.push('car_number = ?'); params.push(encryptedCar);
+    sets.push('car_number_hash = ?'); params.push(carHash);
+  }
   if (email !== undefined) { sets.push('email = ?'); params.push(email); }
   if (answers !== undefined) { sets.push('mypage_answers = ?'); params.push(answers); }
   if (sets.length > 0) {
