@@ -22,6 +22,7 @@ import AdminDetailPage from './pages/admin/AdminDetailPage';
 import AdminQuestionConfig from './pages/admin/AdminQuestionConfig';
 import AdminSmtpConfig from './pages/admin/AdminSmtpConfig';
 import AdminAuditLog from './pages/admin/AdminAuditLog';
+import NotFoundPage from './pages/NotFoundPage';
 
 function ProtectedRoute({ children, requireAdmin, requireSuperAdmin }) {
   const { isLoggedIn, isAdmin, isSuperAdmin } = useAuth();
@@ -57,6 +58,7 @@ function AppRoutes() {
       <Route path="/admin/questions" element={<ProtectedRoute requireAdmin><AdminQuestionConfig /></ProtectedRoute>} />
       <Route path="/admin/smtp" element={<ProtectedRoute requireSuperAdmin><AdminSmtpConfig /></ProtectedRoute>} />
       <Route path="/admin/audit" element={<ProtectedRoute requireSuperAdmin><AdminAuditLog /></ProtectedRoute>} />
+      <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );
 }

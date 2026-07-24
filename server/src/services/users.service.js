@@ -3,6 +3,16 @@ const { NotFoundError, AppError } = require('../utils/errors');
 const logger = require('../utils/logger');
 const { encrypt, decrypt, hash: piiHash } = require('../utils/encrypt');
 
+function exportAll() {
+  const items = db.prepare(
+    `SELECT id, name, email, phone, role, status, blocked_at, created_at FROM users WHERE deleted_at IS NULL ORDER BY created_at DESC`
+  ).all();
+  for (const item of items) {
+    item.phone = decrypt(item.phone);
+  }
+  return items;
+}
+
 function list({ status, search, page, limit }) {
   let where = 'WHERE deleted_at IS NULL';
   const params = [];

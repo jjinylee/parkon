@@ -6,6 +6,7 @@ const authConfig = require('../config/auth');
 const { AuthError, ForbiddenError, ConflictError, NotFoundError, AppError } = require('../utils/errors');
 const logger = require('../utils/logger');
 const { encrypt, hash: piiHash } = require('../utils/encrypt');
+const blacklist = require('./blacklist.service');
 const { getTransporter } = require('./mail-send.service');
 const smtpService = require('./smtp.service');
 
@@ -136,4 +137,24 @@ async function resetPassword({ token, password }) {
   return { message: '비밀번호가 재설정되었습니다. 새 비밀번호로 로그인해주세요.' };
 }
 
-module.exports = { signup, login, forgotPassword, resetPassword };
+async function changePassword(userId, currentPassword, newPassword) {
+  const user = db.prepare('SELECT id, password FROM users WHERE id = ? AND deleted_at IS NULL').get(userId);
+  if (!user) throw new NotFoundError('사용자를 찾을 수 없습니다.');
+
+  const valid = await bcrypt.compare(currentPassword, user.password);
+  if (!valid) throw new AuthError('현재 비밀번호가 일치하지 않습니다.');
+
+  const hash = await bcrypt.hash(newPassword, 10);
+  db.prepare("UPDATE users SET password = ?, updated_at = datetime('now','localtime') WHERE id = ?").run(hash, userId);
+  logger.info(`Password changed: userId=${userId}`);
+  return { message: '비밀번호가 변경되었습니다.' };
+}
+
+async function logout(token, userId, tokenExp) {
+  const expiresAt = new Date(tokenExp * 1000).toISOString().replace('Z', '');
+  blacklist.add(token, userId, expiresAt);
+  logger.info(`User logged out: userId=${userId}`);
+  return { message: '로그아웃되었습니다.' };
+}
+
+module.exports = { signup, login, forgotPassword, resetPassword, changePassword, logout };

@@ -1,4 +1,4 @@
-const BASE_URL = '/api/v1';
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
 
 export async function api(url, options = {}) {
   const token = localStorage.getItem('token');
@@ -26,7 +26,16 @@ export function getToken() {
   return localStorage.getItem('token');
 }
 
-export function logout() {
+export async function logout() {
+  try {
+    const token = localStorage.getItem('token');
+    if (token) {
+      await fetch(`${BASE_URL}/auth/logout`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+      });
+    }
+  } catch {}
   localStorage.removeItem('token');
   localStorage.removeItem('user');
   window.location.href = '/login';

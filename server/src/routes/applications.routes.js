@@ -13,6 +13,7 @@ router.put('/:id', authenticate, applicationsController.update);
 
 // Admin routes
 router.get('/admin/list', authenticate, requireAdmin, applicationsController.getAdminList);
+router.get('/admin/export', authenticate, requireAdmin, applicationsController.exportCSV);
 router.put('/:id/approve', authenticate, requireAdmin, applicationsController.approve);
 router.put('/:id/reject', authenticate, requireAdmin, applicationsController.reject);
 

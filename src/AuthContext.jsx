@@ -1,5 +1,5 @@
 import { createContext, useContext, useState } from 'react';
-import { getToken } from './api';
+import { getToken, logout as apiLogout } from './api';
 
 const AuthContext = createContext(null);
 
@@ -13,9 +13,8 @@ export function AuthProvider({ children }) {
     setUser(userData);
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  const logout = async () => {
+    await apiLogout();
     setUser(null);
   };
 

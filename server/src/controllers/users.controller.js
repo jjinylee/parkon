@@ -46,4 +46,21 @@ async function withdraw(req, res, next) {
   }
 }
 
-module.exports = { list, updateStatus, withdraw };
+async function exportCSV(req, res, next) {
+  try {
+    const items = usersService.exportAll();
+    const bom = '\uFEFF';
+    const header = '이름,이메일,전화번호,권한,상태,가입일';
+    const body = items.map(u =>
+      [u.name, u.email, u.phone, u.role,
+       u.status === 'approved' ? '승인' : u.status === 'pending' ? '대기' : '차단',
+       u.created_at]
+      .map(v => `"${String(v || '').replace(/"/g, '""')}"`).join(',')
+    ).join('\n');
+    res.setHeader('Content-Type', 'text/csv;charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename=users.csv');
+    return res.send(bom + header + '\n' + body);
+  } catch (err) { next(err); }
+}
+
+module.exports = { list, updateStatus, withdraw, exportCSV };

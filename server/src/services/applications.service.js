@@ -238,4 +238,25 @@ function reject(id, adminId, reason) {
   return { id, status: 'rejected' };
 }
 
-module.exports = { getUserApplications, getById, create, update, getAdminList, approve, reject };
+function getExportList({ template_id }) {
+  const items = db.prepare(`
+    SELECT pa.id, pa.user_id, u.name, u.phone, u.email, u.car_number, pa.template_id,
+           t.title AS template_title, pa.total_score, pa.status, pa.submitted_at,
+           pa.admin_memo, pa.created_at,
+           CASE WHEN w.id IS NOT NULL THEN 1 ELSE 0 END AS is_whitelisted
+    FROM parking_applications pa
+    JOIN users u ON u.id = pa.user_id
+    JOIN application_templates t ON t.id = pa.template_id
+    LEFT JOIN whitelist w ON w.car_number_hash = u.car_number_hash
+    WHERE pa.status != 'draft' AND pa.template_id = ?
+    ORDER BY pa.total_score DESC
+  `).all(template_id);
+
+  for (const item of items) {
+    item.phone = decrypt(item.phone);
+    item.car_number = decrypt(item.car_number);
+  }
+  return items;
+}
+
+module.exports = { getUserApplications, getById, create, update, getAdminList, approve, reject, getExportList };

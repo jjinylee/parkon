@@ -112,4 +112,23 @@ async function reject(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { getUserList, getById, create, update, getAdminList, approve, reject };
+async function exportCSV(req, res, next) {
+  try {
+    const { template_id } = req.query;
+    if (!template_id) throw new AppError('VALIDATION_ERROR', 'template_id는 필수입니다.', 400);
+    const items = applicationsService.getExportList({ template_id: Number(template_id) });
+    const bom = '\uFEFF';
+    const header = '순번,이름,전화번호,차량번호,총점,상태,화이트리스트,제출일';
+    const body = items.map((r, i) =>
+      [i + 1, r.name, r.phone, r.car_number || '', r.total_score,
+       r.status === 'approved' ? '승인' : r.status === 'rejected' ? '반려' : '대기',
+       r.is_whitelisted ? 'Y' : 'N', r.submitted_at || '']
+      .map(v => `"${String(v || '').replace(/"/g, '""')}"`).join(',')
+    ).join('\n');
+    res.setHeader('Content-Type', 'text/csv;charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename=applications_${template_id}.csv`);
+    return res.send(bom + header + '\n' + body);
+  } catch (err) { next(err); }
+}
+
+module.exports = { getUserList, getById, create, update, getAdminList, approve, reject, exportCSV };

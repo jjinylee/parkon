@@ -83,6 +83,11 @@ export default function AdminUsers() {
           {/* Count + Actions */}
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
             <span className="text-sm">총 <strong className="text-primary">{users.length}</strong>건</span>
+            <a href="/api/v1/users/export"
+              onClick={e => { e.preventDefault(); window.open('/api/v1/users/export', '_blank'); }}
+              className="border border-primary text-primary px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-primary/5 inline-flex items-center gap-1">
+              <span className="material-symbols-outlined text-sm">download</span> 엑셀 다운로드
+            </a>
           </div>
 
           {/* Grid */}

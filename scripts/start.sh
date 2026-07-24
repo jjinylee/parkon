@@ -14,7 +14,10 @@ case "$MODE" in
     ;;
   prod|production)
     ENV_SRC="$SERVER_DIR/.env.production"
-    FRONT_CMD="npm run preview"
+    echo "[$(date +%H:%M:%S)] 프론트엔드 빌드 중..."
+    cd "$PROJECT_DIR"
+    npm run build
+    FRONT_CMD=""
     ;;
   *)
     echo "사용법: $0 [dev|prod]"
@@ -38,10 +41,13 @@ cd "$SERVER_DIR"
 nohup node src/index.js > "$SERVER_DIR/server.log" 2>&1 &
 echo "[$(date +%H:%M:%S)] 백엔드 시작 (PID $!, SMTP: $(grep ^SMTP_HOST "$SERVER_DIR/.env" | cut -d= -f2)) → http://localhost:4000"
 
-# 프론트
-cd "$PROJECT_DIR"
-nohup $FRONT_CMD > "$PROJECT_DIR/frontend.log" 2>&1 &
-echo "[$(date +%H:%M:%S)] 프론트엔드 시작 (PID $!) → http://localhost:5173"
+if [ -n "$FRONT_CMD" ]; then
+  cd "$PROJECT_DIR"
+  nohup $FRONT_CMD > "$PROJECT_DIR/frontend.log" 2>&1 &
+  echo "[$(date +%H:%M:%S)] 프론트엔드 시작 (PID $!) → http://localhost:5173"
+else
+  echo "[$(date +%H:%M:%S)] 프론트엔드 (Express 내장) → http://localhost:4000"
+fi
 
 echo "[$(date +%H:%M:%S)] 시작 완료"
 echo ""

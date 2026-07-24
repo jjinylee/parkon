@@ -107,4 +107,33 @@ async function resetPassword(req, res, next) {
   }
 }
 
-module.exports = { signup, login, forgotPassword, resetPassword };
+const changePwdSchema = Joi.object({
+  current_password: Joi.string().required().messages({ 'any.required': '현재 비밀번호는 필수입니다.' }),
+  new_password: Joi.string().min(8).pattern(/^(?=.*[a-zA-Z])(?=.*\d)(?=.*[!@#$%^&*])/).required().messages({
+    'string.min': '비밀번호는 8자 이상이어야 합니다.',
+    'string.pattern.base': '비밀번호는 영문, 숫자, 특수문자를 포함해야 합니다.',
+    'any.required': '새 비밀번호는 필수입니다.',
+  }),
+});
+
+async function changePassword(req, res, next) {
+  try {
+    const { error, value } = changePwdSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
+    if (error) {
+      const messages = error.details.map(d => d.message).join(', ');
+      throw new AppError('VALIDATION_ERROR', messages, 400);
+    }
+    const result = await authService.changePassword(req.user.userId, value.current_password, value.new_password);
+    return success(res, result);
+  } catch (err) { next(err); }
+}
+
+async function logout(req, res, next) {
+  try {
+    const authService = require('../services/auth.service');
+    await authService.logout(req.token, req.user.userId, req.tokenExp);
+    return success(res, null, '로그아웃되었습니다.');
+  } catch (err) { next(err); }
+}
+
+module.exports = { signup, login, forgotPassword, resetPassword, changePassword, logout };
