@@ -23,7 +23,7 @@ function MenuNav({ path, onLinkClick }) {
     {
       title: '시스템 보안/관리',
       items: [
-        { icon: 'admin_panel_settings', label: '관리자 관리', to: '/admin/managers' },
+        ...(isSuperAdmin ? [{ icon: 'admin_panel_settings', label: '관리자 관리', to: '/admin/managers' }] : []),
         ...(isSuperAdmin ? [{ icon: 'settings', label: 'SMTP 설정', to: '/admin/smtp' }] : []),
         ...(isSuperAdmin ? [{ icon: 'visibility', label: '개인정보 로그', to: '/admin/audit' }] : []),
       ],
@@ -60,6 +60,18 @@ function MenuNav({ path, onLinkClick }) {
   );
 }
 
+function HelpBanner() {
+  const { isSuperAdmin } = useAuth();
+  if (isSuperAdmin) return null;
+  return (
+    <div className="px-4 pb-4">
+      <div className="px-3 py-2.5 bg-blue-50 border border-blue-100 rounded-lg text-[11px] text-blue-700 leading-relaxed">
+        시스템 보안/관리 메뉴는<br />슈퍼관리자만 접근 가능합니다.
+      </div>
+    </div>
+  );
+}
+
 export default function AdminSidebar({ isOpen, onToggle }) {
   const location = useLocation();
   const path = location.pathname;
@@ -77,10 +89,12 @@ export default function AdminSidebar({ isOpen, onToggle }) {
             <button onClick={onToggle} className="material-symbols-outlined text-2xl">close</button>
           </div>
           <MenuNav path={path} onLinkClick={onToggle} />
+          <HelpBanner />
         </div>
       )}
       <aside className="hidden md:flex w-[200px] bg-surface-container-low/50 border-r border-outline-variant/30 flex-col fixed left-0 top-[64px] h-[calc(100vh-64px)] z-50">
         <MenuNav path={path} />
+        <HelpBanner />
       </aside>
     </>
   );

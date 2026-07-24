@@ -52,7 +52,7 @@ function AppRoutes() {
       <Route path="/admin/mail" element={<ProtectedRoute requireAdmin><AdminMail /></ProtectedRoute>} />
       <Route path="/admin/mail/create" element={<ProtectedRoute requireAdmin><AdminMailCreate /></ProtectedRoute>} />
       <Route path="/admin/users" element={<ProtectedRoute requireAdmin><AdminUsers /></ProtectedRoute>} />
-      <Route path="/admin/managers" element={<ProtectedRoute requireAdmin><AdminManagers /></ProtectedRoute>} />
+      <Route path="/admin/managers" element={<ProtectedRoute requireSuperAdmin><AdminManagers /></ProtectedRoute>} />
       <Route path="/admin/templates/:templateId" element={<ProtectedRoute requireAdmin><AdminDetailPage /></ProtectedRoute>} />
       <Route path="/admin/questions" element={<ProtectedRoute requireAdmin><AdminQuestionConfig /></ProtectedRoute>} />
       <Route path="/admin/smtp" element={<ProtectedRoute requireSuperAdmin><AdminSmtpConfig /></ProtectedRoute>} />
