@@ -214,14 +214,14 @@ function DetailView({ template, rows, quota, onQuotaChange, onBatchApprove, onAp
             </div>
             {(approved > 0 || sorted.length - approved - waiting > 0) && (
               <button onClick={() => setShowMailModal(true)}
-                className="border border-primary text-primary px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-primary/5">
+                className="border border-primary text-primary px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-primary/5 min-w-[100px] text-center">
                 메일 발송
               </button>
             )}
             {!template.finalized ? (
               <div className="flex items-center gap-1">
                 <button onClick={handleFinalize}
-                  className="border border-amber-600 text-amber-700 px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-amber-50 whitespace-nowrap">
+                  className="border border-amber-600 text-amber-700 px-4 py-1.5 rounded-lg text-sm font-bold hover:bg-amber-50 whitespace-nowrap min-w-[100px] text-center">
                   마감
                 </button>
                 <span className="text-xs text-primary hidden md:inline-flex items-center gap-1">
